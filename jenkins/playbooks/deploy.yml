@@ -1,3 +1,12 @@
+- hosts: localhost
+  connection: local
+  tasks:
+    - name: detect the git repo path
+      shell: "git rev-parse --show-toplevel"
+      register: repo_path
+
+    - set_fact: repo_path="{{ repo_path.stdout }}"
+
 - hosts: jenkins-ci
 
   sudo: yes
@@ -49,6 +58,7 @@
       jenkins_plugins:
         - git
         - greenballs
+      repo_path: '{{ hostvars["ansible_connection=local"].repo_path}}'
 
   tasks:
     - name: "create a Jenkins directory for the default user"
@@ -59,6 +69,9 @@
 
     - name: "enable Unix PAM security for Jenkins"
       action: template src=templates/config.xml dest="{{jenkins_home}}/config.xml"
+
+    - name: "Copy the initial JJB"
+      copy: src="{{repo_path}}/jenkins/jjb/build.yaml" dest="{{jenkins_home}}/jobs/build.yaml" owner="jenkins" group="jenkins"
 
     - name: "generate an API token"
       shell: "python {{jenkins_home}}/jobs/configure.py"
