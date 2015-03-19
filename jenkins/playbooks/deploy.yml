@@ -54,9 +54,6 @@
     - name: "create a Jenkins directory for the default user"
       file: path="{{jenkins_home}}/users/jenkins" state=directory owner="jenkins" group="jenkins"
 
-    - name: "copy the JJB boostrap job"
-      action: template src=templates/bootstrap.yaml dest="{{jenkins_home}}/jobs/bootstrap.yaml"
-
     - name: "copy the script to generate and save a Jenkins API key"
       action: template src=templates/jjb/configure.py dest="{{jenkins_home}}/jobs/configure.py"
 
