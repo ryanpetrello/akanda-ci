@@ -1,7 +1,6 @@
 Akanda CI Environment
 ---------------------
-
-::
+Requires the ``ansible`` and ``passlib`` Python packages::
 
     $ mv jenkins/playbooks/hosts.example jenkins/playbooks/hosts
 
