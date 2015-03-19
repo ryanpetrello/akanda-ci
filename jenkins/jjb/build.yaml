@@ -10,6 +10,8 @@
       Rebuild all of the jenkins job definitions.
     scm:
       - git:
-        url: https://github.com/ryanpetrello/akanda-ci.git
+          url: https://github.com/ryanpetrello/akanda-ci.git
+          branches:
+            - origin/master
     builders:
       - shell: "jenkins-jobs update jenkins/jjb"
