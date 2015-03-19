@@ -15,3 +15,6 @@
             - origin/master
     builders:
       - shell: "jenkins-jobs update jenkins/jjb"
+
+    triggers:
+      - timed: '@daily'
