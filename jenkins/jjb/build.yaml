@@ -10,7 +10,7 @@
       Rebuild all of the jenkins job definitions.
     scm:
       - git:
-          url: https://github.com/dreamhost/akanda-ci.git
+          url: https://github.com/akanda/akanda-ci.git
           branches:
             - origin/master
     builders:
