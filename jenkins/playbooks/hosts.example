@@ -1,0 +1,2 @@
+[jenkins-ci]
+hostname ansible_ssh_user=username

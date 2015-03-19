@@ -1,0 +1,9 @@
+#! /bin/sh
+
+SCRIPT_PATH=$(dirname `which $0`)
+pip install -U ansible
+pip install -U passlib
+ansible-galaxy install -p $SCRIPT_PATH/playbooks/roles --force Stouts.jenkins
+ansible-galaxy install -p $SCRIPT_PATH/playbooks/roles --force Stouts.nginx
+
+ansible-playbook -vvvv -i "$SCRIPT_PATH/playbooks/hosts" "$SCRIPT_PATH/playbooks/deploy.yml"

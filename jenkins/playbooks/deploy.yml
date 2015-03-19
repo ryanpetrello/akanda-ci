@@ -1,0 +1,83 @@
+- hosts: jenkins-ci
+
+  sudo: yes
+
+  vars_prompt:
+    - name: "password"
+      prompt: "jenkins password"
+      encrypt: "sha512_crypt"
+      private: yes
+      confirm: yes
+
+  tasks:
+    - name: create a jenkins group
+      group: name=jenkins state=present
+
+    - name: create a jenkins user
+      user: name=jenkins shell=/bin/bash groups=jenkins createhome=yes state=present password={{password}}
+
+    - name: set up default git configuration for the Jenkins user
+      action: template src=templates/gitconfig dest="/home/jenkins/.gitconfig"
+
+- hosts: jenkins-ci
+
+  sudo: yes
+
+  roles:
+    - {role: './Stouts.nginx'}
+    - {role: './Stouts.jenkins'}
+
+  vars:
+      nginx_servers:
+      - |
+        listen 0.0.0.0:80;
+        server_name jenkins;
+        location / { proxy_pass http://127.0.0.1:8080; }
+      nginx_status: false
+      nginx_delete_default_site: true
+
+      jenkins_ssh_key_file: ""
+      jenkins_http_host: 0.0.0.0
+      jenkins_http_port: 8080
+      jenkins_apt_packages:
+        - git
+        - python-dev
+        - python-pip
+        - python-tox
+        - python-m2crypto
+        - jenkins-job-builder
+      jenkins_plugins:
+        - git
+        - greenballs
+
+  tasks:
+    - name: "create a Jenkins directory for the default user"
+      file: path="{{jenkins_home}}/users/jenkins" state=directory owner="jenkins" group="jenkins"
+
+    - name: "copy the JJB boostrap job"
+      action: template src=templates/bootstrap.yaml dest="{{jenkins_home}}/jobs/bootstrap.yaml"
+
+    - name: "copy the script to generate and save a Jenkins API key"
+      action: template src=templates/jjb/configure.py dest="{{jenkins_home}}/jobs/configure.py"
+
+    - name: "enable Unix PAM security for Jenkins"
+      action: template src=templates/config.xml dest="{{jenkins_home}}/config.xml"
+
+    - name: "generate an API token"
+      shell: "python {{jenkins_home}}/jobs/configure.py"
+      register: api_token
+
+    - name: "save the generated API token"
+      action: template src=templates/user.xml dest="{{jenkins_home}}/users/jenkins/config.xml" owner="jenkins" group="jenkins"
+
+    - service: name=jenkins state=restarted
+
+    - name: "wait until the Jenkins API is available"
+      shell: curl --head --silent {{ jenkins_url }}{{ jenkins_prefix }}/cli/
+      delay: 10
+      retries: 12
+      register: result
+      until: result.stdout.find("200 OK") != -1
+
+    - name: "update JJB"
+      shell: jenkins-jobs update "{{jenkins_home}}/jobs"

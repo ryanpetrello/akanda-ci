@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<user>
+  <fullName>jenkins</fullName>
+  <properties>
+    <hudson.model.PaneStatusProperties>
+      <collapsed/>
+    </hudson.model.PaneStatusProperties>
+    <jenkins.security.ApiTokenProperty>
+      <apiToken>{{api_token.stdout}}</apiToken>
+    </jenkins.security.ApiTokenProperty>
+  </properties>
+</user>
