@@ -31,7 +31,7 @@ def main():
     password = base64.b64encode(v + cipher.final())
     print password
 
-    with open('/etc/jenkins_jobs/jenkins_jobs.ini', 'wb') as f:
+    with open('/etc/jenkins_jobs/jenkins_jobs.ini', 'wb+') as f:
         f.write('\n'.join([
             '[jenkins]',
             'user=jenkins',

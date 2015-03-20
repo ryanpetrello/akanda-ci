@@ -52,17 +52,25 @@
         - git
         - python-dev
         - python-pip
-        - python-tox
         - python-m2crypto
-        - jenkins-job-builder
       jenkins_plugins:
         - git
         - greenballs
       repo_path: '{{ hostvars["ansible_connection=local"].repo_path}}'
 
   tasks:
+
+    - name: "install necessary Python packages"
+      pip: name="{{ item }}" state=present
+      with_items:
+        - tox
+        - jenkins-job-builder
+
     - name: "create a Jenkins directory for the default user"
       file: path="{{jenkins_home}}/users/jenkins" state=directory owner="jenkins" group="jenkins"
+
+    - name: "create a directory for JJB config"
+      file: path="/etc/jenkins_jobs" state=directory owner="jenkins" group="jenkins"
 
     - name: "copy the script to generate and save a Jenkins API key"
       action: template src=templates/jjb/configure.py dest="{{jenkins_home}}/jobs/configure.py"
