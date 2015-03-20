@@ -5,12 +5,12 @@
       plaintext: "{{ lookup('password', 'secrets/jenkins length=32')}}"
 
   tasks:
-    - name: detect the git repo path
+    - name: detect the git repo filepath (so we can sync the initial JJB config)
       shell: "git rev-parse --show-toplevel"
       register: repo_path
     - set_fact: repo_path="{{ repo_path.stdout }}"
 
-    - name: generate a sha512 hash of the password
+    - name: generate a sha512 hash of the randomly generated password
       shell: "python -c 'import passlib.hash; print passlib.hash.sha512_crypt.encrypt(\"{{plaintext}}\")'"
       register: password
     - set_fact: password="{{ password.stdout }}"
@@ -23,7 +23,7 @@
     - name: create a jenkins group
       group: name=jenkins state=present
 
-    - name: create a jenkins user
+    - name: create a jenkins user with a random password
       user: name=jenkins
             shell=/bin/bash
             groups=jenkins
@@ -31,7 +31,7 @@
             state=present
             password='{{ hostvars["ansible_connection=local"].password }}'
 
-    - name: set up default git configuration for the Jenkins user
+    - name: set up default git configuration for the jenkins user
       action: template src=templates/gitconfig dest="/home/jenkins/.gitconfig"
 
 - hosts: jenkins-ci
@@ -105,15 +105,6 @@
 
     - name: "save the generated API token"
       action: template src=templates/user.xml dest="{{jenkins_home}}/users/jenkins/config.xml" owner="jenkins" group="jenkins"
-
-    - service: name=jenkins state=restarted
-
-    - name: "wait until the Jenkins API is available"
-      shell: curl --head --silent {{ jenkins_url }}{{ jenkins_prefix }}/cli/
-      delay: 10
-      retries: 12
-      register: result
-      until: result.stdout.find("200 OK") != -1
 
     - name: "update JJB"
       shell: jenkins-jobs update "{{jenkins_home}}/jobs"
