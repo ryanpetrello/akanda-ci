@@ -42,6 +42,9 @@
     - {role: './Stouts.nginx'}
     - {role: './Stouts.jenkins'}
 
+  vars_files:
+    - 'environment.yml'
+
   vars:
       nginx_servers:
       - |
@@ -65,6 +68,12 @@
       repo_path: '{{ hostvars["ansible_connection=local"].repo_path}}'
 
   tasks:
+
+    - name: "set up environment variables"
+      lineinfile: dest=/etc/environment
+                  regexp="{{ item.key }}"
+                  line="{{ item.key }}=\"{{ item.value }}\""
+      with_dict: credentials
 
     - name: "install necessary Python packages"
       pip: name="{{ item }}" state=present
