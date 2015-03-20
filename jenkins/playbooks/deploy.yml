@@ -1,29 +1,35 @@
 - hosts: localhost
   connection: local
+
+  vars:
+      plaintext: "{{ lookup('password', 'secrets/jenkins length=32')}}"
+
   tasks:
     - name: detect the git repo path
       shell: "git rev-parse --show-toplevel"
       register: repo_path
-
     - set_fact: repo_path="{{ repo_path.stdout }}"
+
+    - name: generate a sha512 hash of the password
+      shell: "python -c 'import passlib.hash; print passlib.hash.sha512_crypt.encrypt(\"{{plaintext}}\")'"
+      register: password
+    - set_fact: password="{{ password.stdout }}"
 
 - hosts: jenkins-ci
 
   sudo: yes
-
-  vars_prompt:
-    - name: "password"
-      prompt: "jenkins password"
-      encrypt: "sha512_crypt"
-      private: yes
-      confirm: yes
 
   tasks:
     - name: create a jenkins group
       group: name=jenkins state=present
 
     - name: create a jenkins user
-      user: name=jenkins shell=/bin/bash groups=jenkins createhome=yes state=present password={{password}}
+      user: name=jenkins
+            shell=/bin/bash
+            groups=jenkins
+            createhome=yes
+            state=present
+            password='{{ hostvars["ansible_connection=local"].password }}'
 
     - name: set up default git configuration for the Jenkins user
       action: template src=templates/gitconfig dest="/home/jenkins/.gitconfig"
@@ -75,8 +81,11 @@
     - name: "copy the script to generate and save a Jenkins API key"
       action: template src=templates/jjb/configure.py dest="{{jenkins_home}}/jobs/configure.py"
 
+    - stat: path="{{jenkins_home}}/config.xml"
+      register: global_conf
     - name: "enable Unix PAM security for Jenkins"
-      action: template src=templates/config.xml dest="{{jenkins_home}}/config.xml"
+      template: src=templates/config.xml dest="{{jenkins_home}}/config.xml"
+      when: not global_conf.stat.exists
 
     - name: "Copy the initial JJB"
       copy: src="{{repo_path}}/jenkins/jjb/build.yaml" dest="{{jenkins_home}}/jobs/build.yaml" owner="jenkins" group="jenkins"

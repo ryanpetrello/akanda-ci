@@ -9,3 +9,6 @@ Update ``jenkins/playbooks/hosts`` with the target SSH hostname and username.
 ::
 
     $ ./jenkins/deploy
+
+Check the `jenkins/playbooks/secrets` folder for the password generated for the
+`jenkins` user.
