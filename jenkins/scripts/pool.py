@@ -49,6 +49,8 @@ def get_server_address():
     )
     random.shuffle(servers)
     for server in servers:
+        if server.status != 'ACTIVE':
+            continue
         if 'in-use' in server.metadata:
             continue
         addr = get_public_v4_address(client, server)

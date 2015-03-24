@@ -1,0 +1,18 @@
+- hosts: all
+  connection: local
+  tasks:
+    - name: wait for server to rebuild
+      wait_for: host={{ inventory_hostname }} port=22 delay=15 timeout=60
+
+- hosts: all
+  sudo: yes
+  tasks:
+
+    - name: install git
+      apt: name=git state=present
+
+    - name: clone upstream devstack
+      git: repo=https://github.com/openstack-dev/devstack.git dest="~/devstack" accept_hostkey=yes
+
+    - name: stack.sh
+      shell: "~/devstack/stack.sh"
