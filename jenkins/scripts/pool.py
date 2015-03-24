@@ -38,6 +38,7 @@ def get_server_for_v4_address(client, ip):
 def free(ip):
     client = get_client()
     server = get_server_for_v4_address(client, ip)
+    server.rebuild(server.image['id'])
     client.servers.delete_meta(server, ['in-use'])
 
 
@@ -60,7 +61,6 @@ def get_server_address():
                 'in-use',
                 '1'
             )
-            server.rebuild(server.image['id'])
             return addr
     raise EmptyServerPool()
 
