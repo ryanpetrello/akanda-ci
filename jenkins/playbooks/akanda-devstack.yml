@@ -5,10 +5,10 @@
       wait_for: host={{ inventory_hostname }} port=22 delay=15 timeout=60
 
 - hosts: all
-  sudo: yes
   tasks:
 
     - name: install git
+      sudo: yes
       apt: name=git state=present
 
     - name: clone upstream devstack
