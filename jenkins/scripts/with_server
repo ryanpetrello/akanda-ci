@@ -1,0 +1,24 @@
+#! /bin/sh
+# allocates a Nova VM from a pool and saves ansible SSH credentials to
+# a specified file
+#
+# ./with_server <ansible_host_outfile> <command>
+#
+# e.g.,
+# `./with_server /tmp/.hosts ansible-playbook -i /tmp/.hosts job.yml`
+#
+set -e
+
+IP=''
+function cleanUp() {
+    [ "$IP" ] && python $SCRIPT_PATH/pool.py free $IP
+}
+trap cleanUp EXIT
+
+SCRIPT_PATH=$(dirname `which $0`)
+IP=`python $SCRIPT_PATH/pool.py reserve $1`
+
+shift
+eval $@
+
+cleanUp()
