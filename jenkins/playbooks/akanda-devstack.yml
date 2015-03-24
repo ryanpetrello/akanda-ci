@@ -14,5 +14,19 @@
     - name: clone upstream devstack
       git: repo=https://github.com/openstack-dev/devstack.git dest="~/devstack" accept_hostkey=yes
 
-    - name: stack.sh
-      shell: "~/devstack/stack.sh"
+    - name: create a localrc
+      shell: "cp ~/devstack/samples/local.conf ~/devstack/local.conf"
+
+    - name: start stack.sh in a screen
+      shell: "screen -S devstack -d -m sh -c '~/devstack/stack.sh'"
+
+    - name: wait for stack.sh to start
+      shell: sleep 3
+
+    - name: watch stack.sh stdout
+      shell: "tail -n1 /opt/stack/logs/stack.sh.log && screen -list | grep -q devstack"
+      register: finished
+      until: finished.rc == 1
+      delay: 1
+      retries: 6000
+      ignore_errors: true
