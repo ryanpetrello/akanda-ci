@@ -5,6 +5,9 @@
       wait_for: host={{ inventory_hostname }} port=22 delay=15 timeout=60
 
 - hosts: all
+  vars:
+      logfile: '/opt/stack/logs/stack.sh.log'
+
   tasks:
 
     - name: install git
@@ -18,15 +21,22 @@
       shell: "cp ~/devstack/samples/local.conf ~/devstack/local.conf"
 
     - name: start stack.sh in a screen
-      shell: "screen -S devstack -d -m sh -c '~/devstack/stack.sh'"
+      shell: "screen -S devstack -d -m sh -c 'LOGFILE={{ logfile }} ~/devstack/stack.sh'"
 
     - name: wait for stack.sh to start
       shell: sleep 3
 
     - name: watch stack.sh stdout
-      shell: "tail -n1 /opt/stack/logs/stack.sh.log && screen -list | grep -q devstack"
+      shell: "tail -n1 {{ logfile }} && screen -list | grep -q devstack"
       register: finished
       until: finished.rc == 1
       delay: 1
       retries: 6000
       ignore_errors: true
+
+    - name: ensure that stack.sh finished
+      shell: 'grep "stack.sh completed in" {{ logfile }}'
+      register: stackresult
+
+    - fail: msg="stack.sh did not complete"
+      when: stackresult.rc == 1
