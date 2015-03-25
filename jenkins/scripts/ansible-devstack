@@ -1,0 +1,5 @@
+#! /bin/sh
+# ./ansible-devstack <hosts-file> <playlist>
+
+echo "Running ansible-playbook $2"
+PYTHONUNBUFFERED=1 ANSIBLE_FORCE_COLOR=True ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -vv -i $1 $2 | perl -lpe "s/.*Result from run [0-9]+.*stdout': u'([^']+).*$/\1/g;" -e "s/.*REMOTE_MODULE command tail -n1 \/opt\/stack\/logs\/stack\.sh\.log.*//g;" -e 'print if /\S/'

@@ -7,6 +7,7 @@
 - hosts: all
   vars:
       logfile: '/opt/stack/logs/stack.sh.log'
+      branch: 'master'
 
   tasks:
 
@@ -15,7 +16,7 @@
       apt: name=git state=present
 
     - name: clone upstream devstack
-      git: repo=https://github.com/openstack-dev/devstack.git dest="~/devstack" accept_hostkey=yes
+      git: repo=https://github.com/openstack-dev/devstack.git version="{{ branch }}" dest="~/devstack" accept_hostkey=yes
 
     - name: create a localrc
       shell: "cp ~/devstack/samples/local.conf ~/devstack/local.conf"
@@ -35,7 +36,7 @@
       ignore_errors: true
 
     - name: ensure that stack.sh finished
-      shell: 'grep "stack.sh completed in" {{ logfile }}'
+      shell: 'grep "This is your host ip" {{ logfile }}'
       register: stackresult
 
     - fail: msg="stack.sh did not complete"
