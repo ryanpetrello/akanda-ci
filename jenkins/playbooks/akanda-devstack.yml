@@ -18,8 +18,21 @@
     - name: clone upstream devstack
       git: repo=https://github.com/openstack-dev/devstack.git version="{{ branch }}" dest="~/devstack" accept_hostkey=yes
 
+    - name: clone akanda-devstack repo
+      git: repo=https://github.com/dreamhost/akanda-devstack.git version="{{ branch }}" dest="~/akanda-devstack" accept_hostkey=yes
+
     - name: create a localrc
-      shell: "cp ~/devstack/samples/local.conf ~/devstack/local.conf"
+      template: src=templates/devstack-local.conf dest="~/devstack/local.conf"
+
+    - name: install devstack plugin
+      file: src="~/akanda-devstack/akanda" dest="~/devstack/lib/akanda" state=link
+      when: branch == 'stable/juno'
+
+    - file: src="~/akanda-devstack/20-akanda.sh" dest="~/devstack/extras.d/20-akanda.sh" state=link
+      when: branch == 'stable/juno'
+
+    - file: src="~/akanda-devstack/patches" dest="~/devstack/patches" state=link
+      when: branch == 'stable/juno'
 
     - name: start stack.sh in a screen
       shell: "screen -S devstack -d -m sh -c 'LOGFILE={{ logfile }} ~/devstack/stack.sh'"
