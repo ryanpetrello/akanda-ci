@@ -1,0 +1,42 @@
+- hosts: all
+  vars:
+      repo: 'https://github.com/akanda/akanda-appliance.git'
+      branch: 'ansible'
+      forwarded_ssh_port: 3212
+
+  tasks:
+
+    - name: install necessary packages
+      action: apt pkg={{ item }} state=installed update_cache=yes
+      sudo: yes
+      with_items:
+        - git-core
+        - python-pip
+        - debootstrap
+        - qemu-kvm
+        - qemu-utils
+
+    - name: install diskimage-builder
+      action: pip name=diskimage-builder state=present
+      sudo: yes
+
+    - name: clone akanda-appliance-builder repo
+      git: repo="https://github.com/akanda/akanda-appliance-builder" version="master" dest="~/akanda-appliance-builder" accept_hostkey=yes
+
+    - name: set the appliance source repo and branch
+      copy:
+        dest: "~/akanda-appliance-builder/diskimage-builder/elements/akanda/source-repository-akanda"
+        content: "akanda git /tmp/akanda-appliance {{ repo }} {{ branch }}"
+
+    - name: make sure the source elements file ends with a newline (ansible annoyingly consumes it)
+      shell: "echo \"\" >> ~/akanda-appliance-builder/diskimage-builder/elements/akanda/source-repository-akanda"
+
+    - name: build the image (be patient, this takes awhile)
+      shell: "ELEMENTS_PATH=~/akanda-appliance-builder/diskimage-builder/elements DIB_RELEASE=wheezy DIB_EXTLINUX=1 disk-image-create debian vm akanda"
+
+    - name: boot the VM (in the background)
+      shell: "kvm -m 1024 -vnc :1 -net nic,model=virtio -net user,hostfwd=tcp::{{ forwarded_ssh_port }}-:22 -drive file=image.qcow2,if=virtio --daemonize"
+      sudo: yes
+
+    - name: wait for ssh on the service VM to come up
+      wait_for: host={{ inventory_hostname }} port={{ forwarded_ssh_port }} delay=15 timeout=60
