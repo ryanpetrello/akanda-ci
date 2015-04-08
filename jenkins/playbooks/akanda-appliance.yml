@@ -87,7 +87,7 @@
     ### Make sure the VM is responsive and ready to be configured ###
 
     - name: wait for ssh on the service VM to come up
-      wait_for: host={{ guest_hostname }} port=22 delay=15 timeout=60
+      wait_for: host={{ guest_hostname }} port=22 delay=15 timeout=300
 
     - name: wait for gunicorn on the service VM to come up
       wait_for: host={{ guest_hostname }} port=5000 delay=15 timeout=60
