@@ -1,10 +1,10 @@
 - hosts: all
   vars:
-      repo: 'https://github.com/akanda/akanda-appliance.git'
+      repo: 'https://github.com/ryanpetrello/akanda-appliance.git'
       branch: 'ansible'
       mgt_ula_cidr: 'fdca:3ba5:a17a:acda::1/64'
       guest_macaddr: '00:16:35:AF:94:4B'
-      guest_hostname: '[fdca:3ba5:a17a:acda:216:35ff:feaf:944b]'
+      guest_hostname: 'fdca:3ba5:a17a:acda:216:35ff:feaf:944b'
 
   tasks:
 
@@ -19,7 +19,6 @@
         - debootstrap
         - qemu-kvm
         - qemu-utils
-        - vlan
         - bridge-utils
 
     - name: install diskimage-builder
@@ -39,40 +38,27 @@
     - name: make sure the source elements file ends with a newline (ansible annoyingly consumes it)
       shell: "echo \"\" >> ~/akanda-appliance-builder/diskimage-builder/elements/akanda/source-repository-akanda"
 
-    ### Set up a bridged vlan for the guest ###
-
-    - name: load 8021q into the kernel
-      shell: "modprobe 8021q"
-      sudo: yes
+    ### Set up a bridge for the guest ###
 
     - name: create a bridge
       shell: "brctl addbr br0"
-      sudo: yes
-
-    - name: configure kvm bridge helper
-      copy:
-        dest: "/etc/qemu/bridge.conf"
-        content: "allow br0"
-      sudo: yes
-
-    - name: create a vlan
-      shell: "vconfig add eth0 100"
       sudo: yes
 
     - name: add the fdca cidr to the bridge
       shell: "ip addr add {{ mgt_ula_cidr }} dev br0"
       sudo: yes
 
-    - name: bring the vlan up
-      shell: "ip link set eth0.100 up"
-      sudo: yes
-
-    - name: add the vlan to the bridge
-      shell: "brctl addif br0 eth0.100"
-      sudo: yes
-
     - name: bring the bridge up
       shell: "ip link set br0 up"
+      sudo: yes
+
+    - name: add a script for bringing the tap device for qemu up
+      copy:
+        dest: "/etc/qemu-ifup"
+        content: |
+          #!/bin/sh
+          ip link set tap0 master br0
+          ip link set tap0 up
       sudo: yes
 
     ### Build and boot the image ###
@@ -81,13 +67,21 @@
       shell: "ELEMENTS_PATH=~/akanda-appliance-builder/diskimage-builder/elements DIB_RELEASE=wheezy DIB_EXTLINUX=1 disk-image-create debian vm akanda"
 
     - name: boot the VM (in the background)
-      shell: "kvm -m 1024 -vnc :1 -net nic,vlan=100,macaddr={{ guest_macaddr }},model=virtio,name=akanda -net bridge,vlan=100,br=br0,helper=/usr/lib/qemu-bridge-helper -drive file=image.qcow2,if=virtio --daemonize"
+      shell: "kvm -m 1024 -vnc :1 -net nic,macaddr={{ guest_macaddr }},model=virtio,name=akanda -net tap,ifname=tap0 -drive file=image.qcow2,if=virtio --daemonize"
       sudo: yes
 
     ### Make sure the VM is responsive and ready to be configured ###
 
     - name: wait for ssh on the service VM to come up
-      wait_for: host={{ guest_hostname }} port=22 delay=15 timeout=300
+      command: nc -w5 -vz {{ guest_hostname }} 22
+      register: ssh_result
+      until: ssh_result.rc == 0
+      retries: 18
+      delay: 10
 
     - name: wait for gunicorn on the service VM to come up
-      wait_for: host={{ guest_hostname }} port=5000 delay=15 timeout=60
+      get_url: url="http://[{{ guest_hostname }}]:5000/v1/system/config" timeout=5 dest=/tmp
+      register: http_result
+      until: "'OK' in http_result.msg"
+      retries: 18
+      delay: 10
