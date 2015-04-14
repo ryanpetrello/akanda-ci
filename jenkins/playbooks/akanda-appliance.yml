@@ -1,6 +1,6 @@
 - hosts: all
   vars:
-      repo: 'https://github.com/ryanpetrello/akanda-appliance.git'
+      repo: 'https://github.com/akanda/akanda-appliance.git'
       branch: 'ansible'
       mgt_ula_cidr: 'fdca:3ba5:a17a:acda::1/64'
       guest_macaddr: '00:16:35:AF:94:4B'
