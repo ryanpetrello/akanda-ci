@@ -1,10 +1,10 @@
 - hosts: all
   vars:
       repo: 'https://github.com/akanda/akanda-appliance.git'
-      branch: 'ansible'
+      branch: 'master'
       mgt_ula_cidr: 'fdca:3ba5:a17a:acda::1/64'
-      guest_macaddr: '00:16:35:AF:94:4B'
-      guest_hostname: 'fdca:3ba5:a17a:acda:216:35ff:feaf:944b'
+      guest_macaddr: '52:54:00:12:34:56'
+      guest_hostname: 'fdca:3ba5:a17a:acda:5054:ff:fe12:3456'
 
   tasks:
 
@@ -17,6 +17,7 @@
         - git-core
         - python-pip
         - debootstrap
+        - genisoimage
         - qemu-kvm
         - qemu-utils
         - bridge-utils
@@ -63,11 +64,14 @@
 
     ### Build and boot the image ###
 
+    - name: generate a metadata seed image
+      shell: "genisoimage -output seed.iso -volid cidata -joliet -rock ~/akanda-appliance-builder/nocloud/user-data ~/akanda-appliance-builder/nocloud/meta-data"
+
     - name: build the image (be patient, this takes awhile)
       shell: "ELEMENTS_PATH=~/akanda-appliance-builder/diskimage-builder/elements DIB_RELEASE=wheezy DIB_EXTLINUX=1 disk-image-create debian vm akanda"
 
     - name: boot the VM (in the background)
-      shell: "kvm -m 1024 -vnc :1 -net nic,macaddr={{ guest_macaddr }},model=virtio,name=akanda -net tap,ifname=tap0 -drive file=image.qcow2,if=virtio --daemonize"
+      shell: "kvm -m 1024 -vnc :1 -net nic,macaddr={{ guest_macaddr }},model=virtio,name=akanda -net tap,ifname=tap0 -drive file=image.qcow2,if=virtio -drive file=seed.iso,if=virtio --daemonize"
       sudo: yes
 
     ### Make sure the VM is responsive and ready to be configured ###
